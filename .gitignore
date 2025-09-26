@@ -1,0 +1,45 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Build directories
+build/
+dist/
+tmp/
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# React / front-end
+coverage/
+*.cache
+.cache/
+*.lock
+*.bak
+
+# Misc
+.idea/
+*.sublime-workspace
+*.sublime-project
