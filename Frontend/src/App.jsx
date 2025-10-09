@@ -2,15 +2,16 @@ import React from 'react';
 import Login from "./Pages/Login"
 import Signup from "./Pages/Signup"
 import { Routes, Route } from 'react-router-dom';
+import NoteFlowDashboard from './Pages/Dashboard';
 
 const App = () => {
-  const islogin = localStorage.getItem("islogin");
+  const islogin = "true";
 
   return (
     <div>
        <Routes>
        {islogin ? (
-          <Route path="/*" element={<Dashboard />} />
+          <Route path="/*" element={<NoteFlowDashboard />} />
         ) : (
           <Route path="/" element={<Login />} />
         )}
