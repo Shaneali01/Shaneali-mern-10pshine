@@ -6,7 +6,7 @@ import NotesGrid from '../Components/Dashboard/NotesGrid';
 import Modal from '../Components/Dashboard/Modal';
 import EmptyNotes from '../Components/Dashboard/EmptyNotes';
 import Loading from '../Components/Dashboard/Loading';
-const NotesDashboard = () => {
+const NotesDashboard = ({handleLogout}) => {
   // State management
   const [notes, setNotes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,11 +94,11 @@ const NotesDashboard = () => {
     };
     return colors[category] || 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 border-gray-200';
   };
-  const categories = ['all', 'work', 'personal', 'learning'];
+  const categories = ['all', 'work', 'personal', 'learning', 'ideas', 'todo'];
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header with app branding and create button */}
-     <Header handleCreateNote={handleCreateNote} />
+     <Header handleCreateNote={handleCreateNote} handleLogout={handleLogout} />
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filter Section */}
