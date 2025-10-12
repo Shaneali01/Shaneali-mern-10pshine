@@ -1,30 +1,107 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Swal from 'sweetalert2';
 import Header from "../Components/Profile/Header";
 import ContactInformation from "../Components/Profile/ContactInformation";
 import ActionButton from "../Components/Profile/ActionButton";
 import BioSection from "../Components/Profile/BioSection";
 import Stats from "../Components/Profile/Stats";
 import ProfileHeader from "../Components/Profile/ProfileHeader";
+import { axiosInstance } from "../Lib/axios";
 
-export default function ProfilePage() {
+export default function ProfilePage({handleLogout}) {
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    location: "San Francisco, CA",
-    role: "Software Developer Intern",
-    joinDate: "September 2024",
-    bio: "Passionate about creating intuitive applications and learning new technologies. Currently working on a notes management system during my internship.",
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    role: "",
+    joinDate: "",
+    bio: "",
     profileImage: null,
   });
 
   const [tempUserData, setTempUserData] = useState({ ...userData });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
 
-  const handleLogout = () => {
-    const confirmLogout = window.confirm("Are you sure you want to logout?");
-    if (confirmLogout) {
-      alert("Logging out... (You will implement actual logout logic here)");
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        let userId = JSON.parse(localStorage.getItem('userId')); // Assume you store userId after login
+        if (!userId) {
+          setError("User ID not found. Please log in again.");
+          return;
+        }
+        const response = await axiosInstance.get(`/user/${userId}`, {withCredentials: true});
+        console.log(response);
+        if (response.status === 200) {
+          const parsed = response.data.user;
+          console.log(parsed);
+          const formatDate = (dateString) => {
+            if (!dateString) return '';
+            return new Date(dateString).toISOString().split('T')[0];
+          };
+          const userDataToSet = {
+            name: parsed.name || "",
+            email: parsed.email || "",
+            phone: parsed.phone || "",
+            location: parsed.address || "",
+            role: parsed.profession || "",
+            joinDate: formatDate(parsed.joinedAt),
+            bio: parsed.bio || "", // If backend has bio, use it
+            profileImage: parsed.image || null,
+          };
+          setUserData(userDataToSet);
+          setTempUserData({ ...userDataToSet });
+          // Optional: cache in localStorage
+          localStorage.setItem('user', JSON.stringify(parsed));
+        } else {
+          setError("Failed to fetch user data.");
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        setError("Error fetching user data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-red-500 text-lg">{error}</div>
+      </div>
+    );
+  }
+
+  
+
+  const confirmLogout = async () => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, log out!'
+    });
+
+    if (result.isConfirmed) {
+      handleLogout();
     }
   };
 
@@ -33,9 +110,42 @@ export default function ProfilePage() {
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    setUserData({ ...tempUserData });
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      const userId = JSON.parse(localStorage.getItem('userId'));
+      if (!userId) {
+        setError("User ID not found.");
+        return;
+      }
+      const saveResponse = await axiosInstance.put(`/user/${userId}`, {
+        name: tempUserData.name,
+        email: tempUserData.email,
+        phone: tempUserData.phone,
+        address: tempUserData.location,
+        profession: tempUserData.role,
+        image: tempUserData.profileImage,
+        // Do not include joinedAt to preserve original
+      }, {withCredentials: true});
+      if (saveResponse.status === 200) {
+        const updatedUser = saveResponse.data.user;
+        const formatDate = (dateString) => {
+          if (!dateString) return '';
+          return new Date(dateString).toISOString().split('T')[0];
+        };
+        setUserData({
+          ...tempUserData,
+          joinDate: formatDate(updatedUser.joinedAt), // Refetch the date from backend
+        });
+        setIsEditing(false);
+        Swal.fire('Saved!', 'Your profile has been updated.', 'success');
+      } else {
+        console.log(saveResponse.response.data.message)
+        Swal.fire('Error', 'Failed to save profile.', 'error');
+      }
+    } catch (error) {
+      console.error("Error saving user data:", error.response.data.message);
+      Swal.fire('Error', `${error.response.data.message}`, 'error');
+    }
   };
 
   const handleCancel = () => {
@@ -84,14 +194,6 @@ export default function ProfilePage() {
                 isEditing={isEditing}
               />
 
-              {/* Bio Section */}
-              <BioSection
-                isEditing={isEditing}
-                handleInputChange={handleInputChange}
-                tempUserData={tempUserData}
-                userData={userData}
-              />
-
               {/* Contact Information */}
               <ContactInformation
                 userData={userData}
@@ -104,7 +206,7 @@ export default function ProfilePage() {
               <ActionButton
                 isEditing={isEditing}
                 handleEdit={handleEdit}
-                handleLogout={handleLogout}
+                handleLogout={confirmLogout}
                 handleSave={handleSave}
                 handleCancel={handleCancel}
               />

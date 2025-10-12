@@ -4,6 +4,7 @@ import User from "../Model/User.js";
 import multer from "multer";
 import cloudinary from "../Config/Cloudinary.js";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -132,14 +133,8 @@ const login = async(req,res)=>{
         message: "User logged in successfully",
         user: {
           id: user._id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          address: user.address,
-          profession: user.profession,
-          image: user.image,
+
         },
-        token:token
       });
 
     }
@@ -175,5 +170,182 @@ const logout=async(req,res)=>{
 
     }
 }
+const GetUser=async(req,res)=>{
+  try{
+    console.log(req.params.id)
+    const user=await User.findById(req.params.id);
+    console.log(user)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({
+      success: true,
+      message: "User fetched successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        profession: user.profession,
+        image: user.image,
+        joinedAt:user.createdAt,
+      },
+    });
 
-export { register, upload, login,CheckLoginUser,logout };
+  }
+  catch(error){
+    res.status(500).json({ message: error.message });
+  }
+}
+const updateUser = async (req, res) => {
+  try {
+    const { name, email, phone, address, profession, image } = req.body;
+    
+    // Validate email format if provided
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+    
+    // Check if email is already in use by another user
+    if (email) {
+      const existingUser = await User.findOne({ 
+        email, 
+        _id: { $ne: req.params.id } 
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+    
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { name, email, phone, address, profession, image },
+      { new: true }
+    );
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({
+      success: true,
+      message: "User updated successfully",
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        address: updatedUser.address,
+        profession: updatedUser.profession,
+        image: updatedUser.image,
+        joinedAt: updatedUser.createdAt,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+const GetHeaderInfo=async(req,res)=>{
+  try{
+    const user=await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({
+      success: true,
+      message: "User fetched successfully",
+      user: {
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      },
+    });
+
+  }
+  catch(error){
+    res.status(500).json({ message: error.message });
+  }
+}
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate reset token (expires in 1 hour)
+    const token = jwt.sign(
+      { id: user._id },
+      'secret_key',
+      { expiresIn: '15m' }
+    );
+
+    // Store token in user (or use a separate collection for resets; here we add to user temporarily)
+
+    // Email transporter (using Gmail; adjust for your service)
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const resetUrl = `http://localhost:5173/reset-password/${token}`; // Adjust for production domain
+    const mailOptions = {
+      to: email,
+      subject: 'Password Reset - NoteFlow',
+      html: `
+        <h2>Password Reset Request</h2>
+        <p>You requested a password reset. Click the link below to set a new password:</p>
+        <a href="${resetUrl}" style="background: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+        <p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Password reset email sent successfully' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error occurred' });
+  }
+};
+const resetPassword =  async (req, res) => {
+  console.log("reset password")
+  const { token } = req.params;
+  const { password } = req.body;
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, 'secret_key');
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid token' });
+    }
+
+    // Check if token is expired (via stored expiration)
+
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update password and clear reset fields
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(400).json({ message: 'Invalid token' });
+    }
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error occurred' });
+  }
+};
+export { register, upload, login,CheckLoginUser,logout,GetUser,updateUser,GetHeaderInfo,forgotPassword,resetPassword };

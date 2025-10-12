@@ -217,7 +217,6 @@ const Signup = () => {
            </div>
           )}
         <Watermarks/>
-        <Toaster position='top-center' toastOptions={{ duration: 3000 }} />
       </div>
     </>
   );

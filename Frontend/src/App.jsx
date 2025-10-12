@@ -10,6 +10,8 @@ import NoteEditor from './Pages/NoteEditor';
 import ProfilePage from './Pages/Profile';
 import { axiosInstance } from './Lib/axios';
 import ClipLoader from 'react-spinners/ClipLoader'; // Import ClipLoader from react-spinners
+import ForgotPassword from './Pages/ForgotPassword';
+import ResetPassword from './Pages/ResetPassword';
 
 const App = () => {
   const [isLogin, setIsLogin] = useState(false); // Start false; we'll check immediately
@@ -80,15 +82,17 @@ const App = () => {
           <>
             <Route path="/" element={<NoteFlowDashboard handleLogout={handleLogout} />} />
             <Route path="/editor" element={<NoteEditor />} />
-            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile" element={<ProfilePage handleLogout={handleLogout} />} />
             <Route path="/signup" element={<Signup />} /> {/* Allow signup even when logged in */}
             <Route path="*" element={<Navigate to="/" />} />
           </>
         ) : (
           <>
             <Route path="/" element={<Login checkAuth={checkAuth} />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+
             <Route path="/signup" element={<Signup />} />
-            <Route path="*" element={<Navigate to="/" />} />
           </>
         )}
       </Routes>

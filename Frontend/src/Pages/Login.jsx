@@ -38,7 +38,8 @@ const Login = ({ checkAuth }) => {
       const data = response.data;
       console.log(data);      
       const successToastId = toast.success('Login successful!');
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('userId', JSON.stringify(data.user.id));
+      localStorage.setItem('joinedAt', JSON.stringify(data.user.joinedAt));
       setTimeout(async () => {
         toast.dismiss(successToastId);
         setFormData({
@@ -139,7 +140,6 @@ const Login = ({ checkAuth }) => {
       </div>
       <ToggleButton />
       <Watermarks />
-      <Toaster position='top-center' toastOptions={{ duration: 3000 }} />
     </div>
   );
 };
