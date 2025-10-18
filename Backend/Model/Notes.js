@@ -1,40 +1,48 @@
+// Models/Note.js (Mongoose Schema)
 import mongoose from "mongoose";
 
-const noteSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId, // Reference to User
-      ref: "User",
-      required: true,
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    content: {
-      type: String, // Will store HTML content from Tiptap or any editor
-      required: true,
-    },
-    plainText: {
-      type: String, // Optional: extracted plain text (if you want search or preview)
-    },
-    category: {
-      type: String,
-      default: "general",
-    },
-    tags: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    isPinned: {
-      type: Boolean,
-      default: false,
-    },
+const noteSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
   },
-  { timestamps: true } // Automatically adds createdAt & updatedAt
-);
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  content: {
+    type: String,
+    required: true,
+  },
+  plainText: {
+    type: String,
+    required: true,
+  },
+  category: {
+    type: String,
+    enum: ["work", "personal", "learning"],
+    default: "work",
+  },
+  tags: [{
+    type: String,
+    trim: true,
+  }],
+  isPinned: {
+    type: Boolean,
+    default: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+}, {
+  timestamps: false, // Use custom createdAt/updatedAt
+});
 
 export default mongoose.model("Note", noteSchema);

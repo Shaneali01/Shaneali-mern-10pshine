@@ -1,5 +1,6 @@
 import "../Components/NoteEditor/NoteEditor.css";
 import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from 'react-router-dom';
 import { Check } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -9,17 +10,27 @@ import SideBar from "../Components/NoteEditor/SideBar";
 import Header from "../Components/NoteEditor/Header";
 import MobileMenu from "../Components/NoteEditor/MobileMenu";
 import EditorArea from "../Components/NoteEditor/EditorArea";
+import { axiosInstance } from "../Lib/axios"; // Assuming this is your axios setup
+import Swal from 'sweetalert2';
+import BarLoader from 'react-spinners/BarLoader';
 
 const NoteEditor = () => {
+  const { noteId } = useParams(); // Get noteId from route params (e.g., /editor/:noteId)
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
+  const [originalTitle, setOriginalTitle] = useState(""); // Track original title for comparison
   const [category, setCategory] = useState("work");
+  const [originalCategory, setOriginalCategory] = useState("work"); // Track original category
   const [tags, setTags] = useState([]);
+  const [originalTags, setOriginalTags] = useState([]); // Track original tags
   const [tagInput, setTagInput] = useState("");
   const [isPinned, setIsPinned] = useState(false);
+  const [originalIsPinned, setOriginalIsPinned] = useState(false); // Track original pin
   const [isSaving, setIsSaving] = useState(false);
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [editorState, setEditorState] = useState({});
   const [showSidebar, setShowSidebar] = useState(false);
+  const [loading, setLoading] = useState(false); // New: Loading state for fetching note
+  const [originalContent, setOriginalContent] = useState(""); // Track original editor content
   const menuRef = useRef(null);
 
   const editor = useEditor({
@@ -40,7 +51,7 @@ const NoteEditor = () => {
           "Start writing your note... You can use formatting tools above!",
       }),
     ],
-    content: "",
+    content: "", // Start empty
     editorProps: {
       attributes: {
         class:
@@ -72,6 +83,7 @@ const NoteEditor = () => {
       });
     },
   });
+
   const getCategoryColor = (cat) => {
     const colors = {
       work: "from-blue-500 to-blue-600",
@@ -99,13 +111,89 @@ const NoteEditor = () => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
+  // Helper: Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    // For new notes: prompt if any content exists
+    if (!noteId) {
+      return title.trim() !== "" || editor?.getText().trim() !== "";
+    } else {
+      // For editing: compare current vs original
+      const tagsChanged = JSON.stringify(tags.sort()) !== JSON.stringify(originalTags.sort());
+      return (
+        title !== originalTitle ||
+        editor?.getHTML() !== originalContent ||
+        tagsChanged ||
+        category !== originalCategory ||
+        isPinned !== originalIsPinned
+      );
+    }
+  };
+
+  // New: Fetch and load existing note if editing
+  useEffect(() => {
+    if (noteId && editor) {
+      const fetchNote = async () => {
+        setLoading(true);
+        try {
+          const response = await axiosInstance.get(`/note/get-note/${noteId}`);
+          const note = response.data.note;
+          if (note) {
+            // Load data into state
+            setTitle(note.title || "");
+            setOriginalTitle(note.title || "");
+            setCategory(note.category || "work");
+            setOriginalCategory(note.category || "work");
+            setTags(note.tags || []);
+            setOriginalTags(note.tags || []);
+            setIsPinned(note.isPinned || false);
+            setOriginalIsPinned(note.isPinned || false);
+            // Load HTML content into editor
+            const content = note.content || "";
+            editor.commands.setContent(content);
+            setOriginalContent(content);
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Note Not Found',
+              text: 'The note could not be loaded.',
+            });
+            navigate('/dashboard'); // Redirect to dashboard if not found
+          }
+        } catch (error) {
+          console.error("Error fetching note:", error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Load Failed',
+            text: error.response?.data?.message || 'Failed to load note.',
+          });
+          navigate('/dashboard'); // Redirect on error
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchNote();
+    }
+  }, [noteId, editor, navigate]);
+
   const handleSave = async () => {
     if (!editor) return;
 
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'User not found. Please log in.',
+      });
+      setIsSaving(false);
+      return;
+    }
 
     const noteData = {
+      userId: JSON.parse(userId), // Assuming userId is stringified
       title,
       content: editor.getHTML(),
       plainText: editor.getText(),
@@ -115,35 +203,100 @@ const NoteEditor = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    console.log("Saving note:", noteData);
-    setIsSaving(false);
-    setShowSaveSuccess(true);
-    setTimeout(() => setShowSaveSuccess(false), 3000);
-  };
-
-  const handleBack = () => {
-    const hasContent = title || (editor && editor.getText().length > 0);
-    if (hasContent) {
-      const confirmLeave = window.confirm(
-        "You have unsaved changes. Are you sure you want to leave?"
-      );
-      if (confirmLeave) {
-        console.log("Navigate back to dashboard");
-        alert("Navigate back to dashboard - implement your routing logic here");
+    try {
+      let endpoint = '/note/create-note';
+      console.log("this console is working perfectly")
+      if (noteId) {
+        endpoint = `/note/update-note/${noteId}`; // Use PUT/PATCH for update
+        noteData.updatedAt = new Date().toISOString();
       }
-    } else {
-      console.log("Navigate back to dashboard");
-      alert("Navigate back to dashboard - implement your routing logic here");
+      const response = await axiosInstance.post(endpoint, noteData); // Adjust to PUT if backend uses it
+      console.log("Note saved successfully:", noteData);
+      Swal.fire({
+        icon: 'success',
+        title: 'Saved!',
+        text: noteId ? 'Note updated successfully.' : 'Note saved successfully.',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      
+      // After save, update originals to match current state (no more unsaved changes)
+      setOriginalTitle(title);
+      setOriginalContent(editor.getHTML());
+      setOriginalCategory(category);
+      setOriginalTags([...tags]);
+      setOriginalIsPinned(isPinned);
+      
+      // If new note, optionally navigate back or get the new ID
+      if (!noteId) {
+        // Example: Navigate to edit view with new ID
+        // navigate(`/editor/${response.data.note.id}`);
+      }
+    } catch (error) {
+      console.error("Error saving note:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: error.response?.data?.message || 'Something went wrong.',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDelete = () => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this note?"
-    );
-    if (confirmDelete) {
-      console.log("Delete note");
-      alert("Delete note - implement your delete logic here");
+  const handleBack = async () => {
+    const hasUnsaved = hasUnsavedChanges();
+    if (hasUnsaved) {
+      const result = await Swal.fire({
+        title: 'Unsaved Changes',
+        text: "You have unsaved changes. Are you sure you want to leave?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Leave anyway',
+        cancelButtonText: 'Stay here'
+      });
+      if (result.isConfirmed) {
+        navigate('/dashboard'); // Use navigate for proper routing
+      }
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!noteId) return; // Only delete if editing existing note
+
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axiosInstance.delete(`/note/delete-note/${noteId}`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Note deleted successfully.',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        navigate('/dashboard');
+      } catch (error) {
+        console.error("Error deleting note:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Delete Failed',
+          text: error.response?.data?.message || 'Something went wrong.',
+        });
+      }
     }
   };
 
@@ -196,8 +349,12 @@ const NoteEditor = () => {
     }
   }, [title, editor?.state.doc]);
 
-  if (!editor) {
-    return null;
+  if (!editor || loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <BarLoader color="#6366f1" height={4} width={200} />
+      </div>
+    ); // Linear bar spinner for loading
   }
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -231,18 +388,6 @@ const NoteEditor = () => {
         menuRef={menuRef}
         handleDelete={handleDelete}
       />
-
-      {/* Success Toast */}
-      {showSaveSuccess && (
-        <div className="fixed top-20 right-4 sm:right-6 bg-white border border-gray-200 text-gray-900 px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in">
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-              <Check className="w-3 h-3 text-white" />
-            </div>
-            <span className="text-sm font-medium">Saved successfully</span>
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">

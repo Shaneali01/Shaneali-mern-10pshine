@@ -7,6 +7,7 @@ import BioSection from "../Components/Profile/BioSection";
 import Stats from "../Components/Profile/Stats";
 import ProfileHeader from "../Components/Profile/ProfileHeader";
 import { axiosInstance } from "../Lib/axios";
+import BarLoader from 'react-spinners/BarLoader';
 
 export default function ProfilePage({handleLogout}) {
   const [isEditing, setIsEditing] = useState(false);
@@ -74,7 +75,7 @@ export default function ProfilePage({handleLogout}) {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <BarLoader color="#6366f1" height={4} width={200} />
       </div>
     );
   }

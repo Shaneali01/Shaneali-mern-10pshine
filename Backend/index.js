@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv"
 import cors from "cors"
 import UserRoutes from "./Routes/User.js"
+import NoteRoutes from "./Routes/Notes.js"
 import cookieParser from "cookie-parser"
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.get("/",(req,res)=>{
     res.send("Hello World")
 })
 app.use("/api/user",UserRoutes);
+app.use("/api/note",NoteRoutes);
 app.listen(5000, () => {
     console.log("Server is running on port 5000");
 })

@@ -81,7 +81,9 @@ const App = () => {
         {isLogin ? (
           <>
             <Route path="/" element={<NoteFlowDashboard handleLogout={handleLogout} />} />
+            <Route path="/editor/:noteId" element={<NoteEditor />} />
             <Route path="/editor" element={<NoteEditor />} />
+
             <Route path="/profile" element={<ProfilePage handleLogout={handleLogout} />} />
             <Route path="/signup" element={<Signup />} /> {/* Allow signup even when logged in */}
             <Route path="*" element={<Navigate to="/" />} />
@@ -93,6 +95,8 @@ const App = () => {
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             <Route path="/signup" element={<Signup />} />
+            <Route path="*" element={<Navigate to="/" />} />
+
           </>
         )}
       </Routes>

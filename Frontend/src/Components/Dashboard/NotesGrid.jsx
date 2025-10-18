@@ -17,7 +17,7 @@ const NotesGrid = ({sortedNotes, handleViewNote, handleEditNote, handleDeleteNot
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {sortedNotes.map(note => (
         <div
-          key={note.id}
+          key={note._id}
           className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl border border-slate-200/50 hover:border-slate-300/50 transition-all duration-300 group cursor-pointer transform hover:-translate-y-2 hover:bg-white/80"
           onClick={() => handleViewNote(note)}
         >
@@ -82,7 +82,8 @@ const NotesGrid = ({sortedNotes, handleViewNote, handleEditNote, handleDeleteNot
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    togglePin(note.id);
+                    console.log(note)
+                    togglePin(note._id);
                   }}
                   className="p-1.5 rounded-lg hover:bg-indigo-100 transition-colors duration-200"
                   title={note.isPinned ? 'Unpin note' : 'Pin note'}
@@ -94,7 +95,8 @@ const NotesGrid = ({sortedNotes, handleViewNote, handleEditNote, handleDeleteNot
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleEditNote(note.id);
+                    console.log(note)
+                    handleEditNote(note._id);
                   }}
                   className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors duration-200"
                   title="Edit note"
@@ -106,7 +108,7 @@ const NotesGrid = ({sortedNotes, handleViewNote, handleEditNote, handleDeleteNot
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteNote(note.id);
+                    handleDeleteNote(note._id);
                   }}
                   className="p-1.5 rounded-lg hover:bg-red-100 transition-colors duration-200"
                   title="Delete note"
