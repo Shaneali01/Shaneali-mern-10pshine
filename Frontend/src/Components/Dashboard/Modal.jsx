@@ -1,4 +1,4 @@
-import { Calendar, Clock, Edit3, Star, Tag, X } from 'lucide-react'
+import { Calendar, Clock, Edit3, Pin, Tag, X } from 'lucide-react'
 import React from 'react'
 
 const Modal = ({selectedNote, handleEditNote,handleCloseModal,formatDate,getCategoryColor,togglePin}) => {
@@ -7,12 +7,6 @@ const Modal = ({selectedNote, handleEditNote,handleCloseModal,formatDate,getCate
     {/* Modal Header */}
     <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50">
       <div className="flex items-center space-x-3">
-        {/* Pin indicator */}
-        {selectedNote.isPinned && (
-          <div className="p-1.5 bg-yellow-100 rounded-full">
-            <Star className="w-4 h-4 text-yellow-600 fill-current" />
-          </div>
-        )}
         {/* Category badge */}
         <span className={`inline-block px-3 py-1.5 text-sm font-semibold rounded-full border ${getCategoryColor(selectedNote.category)}`}>
           {selectedNote.category}
@@ -65,12 +59,11 @@ const Modal = ({selectedNote, handleEditNote,handleCloseModal,formatDate,getCate
         </div>
       )}
 
-      {/* Full Note Content */}
-      <div className="prose prose-slate max-w-none">
-        <pre className="whitespace-pre-wrap font-sans text-slate-700 leading-relaxed text-base">
-          {selectedNote.content}
-        </pre>
-      </div>
+      {/* Full Note Content - FIXED: Now renders HTML properly */}
+      <div 
+        className="prose prose-slate prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-slate-700 prose-strong:text-slate-900 prose-em:text-slate-600 prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-100 prose-pre:text-slate-800 prose-ul:list-disc prose-ol:list-decimal max-w-none leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: selectedNote.content }}
+      />
     </div>
 
     {/* Modal Footer */}
@@ -79,7 +72,7 @@ const Modal = ({selectedNote, handleEditNote,handleCloseModal,formatDate,getCate
       <div className="flex items-center space-x-4 text-sm text-slate-500">
         <div className="flex items-center space-x-1">
           <Calendar className="w-4 h-4" />
-          <span>Created {formatDate(selectedNote.createdAt)}</span>
+          <span>Created {formatDate(selectedNote.createdAt || selectedNote.updatedAt)}</span>
         </div>
         <div className="flex items-center space-x-1">
           <Clock className="w-4 h-4" />
@@ -94,11 +87,11 @@ const Modal = ({selectedNote, handleEditNote,handleCloseModal,formatDate,getCate
           onClick={() => togglePin(selectedNote.id)}
           className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
             selectedNote.isPinned
-              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+              ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
               : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
           }`}
         >
-          <Star className={`w-4 h-4 mr-2 ${selectedNote.isPinned ? 'fill-current' : ''}`} />
+          <Pin className={`w-4 h-4 mr-2 ${selectedNote.isPinned ? 'fill-current' : ''}`} />
           {selectedNote.isPinned ? 'Unpin' : 'Pin'}
         </button>
         
